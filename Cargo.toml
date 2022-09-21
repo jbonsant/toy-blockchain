@@ -1,0 +1,9 @@
+[package]
+name = "b"
+version = "0.1.0"
+authors = ["Jeremie Bonsant <jeremie@bonsant.ca>"]
+edition = "2021"
+
+[dependencies]
+structopt = { version = "0.3", default-features = false }
+clap = { version = "3.2.22", features = ["derive"] }
