@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+mod blockchain;
 
 #[derive(Parser)]
 #[clap(name = "b")]
@@ -29,12 +30,11 @@ enum Commands {
 fn main() {
 	let cli = Cli::parse();
 
-	// You can check for the existence of subcommands, and if found use their
-	// matches just as you would the top level app
 	match &cli.command {
 
 		Commands::StartNode { } => {
-			println!("Starting Node ...")
+			println!("Starting Node ...");
+			blockchain::run();
 		},
 		Commands::CreateAccount { id_of_account, starting_balance } => {
 			println!("Creating Account\nid: {:?}\nbalance: {:?}\n...", id_of_account, starting_balance);
