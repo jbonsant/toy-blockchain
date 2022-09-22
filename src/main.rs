@@ -9,6 +9,7 @@ use bytes::{Bytes, BytesMut, BufMut};
 
 const NODE_ADDR: &str = "0.0.0.0:8080";
 const CLIENT_ADDR: &str = "0.0.0.0:8081";
+const BLOCK_TIME_SECS: u64 = 2;
 
 #[derive(Parser)]
 #[clap(name = "b")]
@@ -64,6 +65,7 @@ fn bytes_to_args(bytes: Bytes) -> Vec<String> {
 async fn main() -> Result<(), Box<dyn Error>> {
 
 	let mut rcv_data = [0; 1024];
+
 	let cli = Cli::parse();
 
 	match cli.command {
@@ -72,7 +74,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 			println!("Starting Node ...");
 
 			let mut chain = Blockchain::new();
-
+			let mut new_block_interval = tokio::time::interval(Duration::from_secs(BLOCK_TIME_SECS));
+			let mut next_block_messages: Vec<String> = Vec::new();
+			
 			match UdpSocket::bind(NODE_ADDR).await {
 				Err(e) => {
 					if e.kind() == io::ErrorKind::AddrInUse {
@@ -83,37 +87,33 @@ async fn main() -> Result<(), Box<dyn Error>> {
 				Ok(socket) => {
 					loop {
 						tokio::select! {
-							_ = tokio::time::sleep(Duration::from_secs(2)) => {
+							_ = new_block_interval.tick() => {
 								chain.new_block();
+						
+								for msg in &next_block_messages {
+									socket.send_to(msg.as_bytes(), CLIENT_ADDR).await?;
+								}
 							}
-							Result::Ok((len, addr)) = socket.recv_from(&mut rcv_data) => {
-							
-								let bytes = Bytes::copy_from_slice(&rcv_data[..len]);
+							Result::Ok(rcv_data_len) = socket.recv(&mut rcv_data) => {
+								
+								let bytes = Bytes::copy_from_slice(&rcv_data[..rcv_data_len]);
 								let args = bytes_to_args(bytes);
-
 								let cli = Cli::parse_from(args.into_iter());
 
 								match cli.command {
 									Commands::CreateAccount { id_of_account, starting_balance } => {
-
 										chain.new_account(id_of_account, starting_balance);
-
-										let msg = format!("Account created");
-										socket.send_to(msg.as_bytes(), addr).await?;
+										next_block_messages.push(format!("Account created"));
 									},
 									Commands::Transfert { from_account , to_account, ammount } => {
-
 										chain.new_transaction(from_account, to_account, ammount);
-
-										let msg = format!("Transaction done");
-										socket.send_to(msg.as_bytes(), addr).await?;
+										next_block_messages.push(format!("Transaction done"));
 									},
 									Commands::Balance { account } => {
-
-										let ammount: i32 = chain.get_balance(account);
 										
+										let ammount: i32 = chain.get_balance(account);
 										let msg = format!("Balance of account '{:?}' is {:?}", account, ammount);
-										socket.send_to(msg.as_bytes(), addr).await?;
+										socket.send_to(msg.as_bytes(), CLIENT_ADDR).await?;
 									}
 									_ => {}
 								}	

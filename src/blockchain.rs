@@ -38,25 +38,28 @@ impl Blockchain {
 	}
 
 	pub fn new_block(&mut self) {
-		println!("blockchain : new_block");
-
         let block = Block {
-            index: self.last_block_index() + 1,
+            index: self.get_last_block_index() + 1,
             transactions: self.current_transactions.clone(),
         };
 
         self.current_transactions = Vec::new();
         self.chain.push(block);
+		println!("new block added (transactions count : {})", &self.chain[self.get_last_block_index()].transactions.len());
 	}
 
-	pub fn new_account(&mut self, account: u32, amount: i32) {
+	/// Adds a account, returns index of new block that will hold this transaction
+	pub fn new_account(&mut self, account: u32, amount: i32) -> usize {
 		let new_transaction = Transaction::new(GENESIS_ACCOUNT_ID, account, amount);
         self.current_transactions.push(new_transaction);
+		return self.get_last_block_index() + 1; 
 	}
 	
-	pub fn new_transaction(&mut self, sender: u32, recipient: u32, amount: i32) {
+	/// Adds a transaction, returns index of new block that will hold this transaction
+	pub fn new_transaction(&mut self, sender: u32, recipient: u32, amount: i32) -> usize {
 		let new_transaction = Transaction::new(sender, recipient, amount);
         self.current_transactions.push(new_transaction);
+		return self.get_last_block_index() + 1;
 	}
 
 	pub fn get_balance(&self, account: u32) -> i32 {
@@ -76,7 +79,7 @@ impl Blockchain {
 		balance
 	}
 
-	fn last_block_index(&self) -> usize {
+	pub fn get_last_block_index(&self) -> usize {
         self.chain.len()  - 1
     }
 }
