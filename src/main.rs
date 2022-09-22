@@ -24,12 +24,12 @@ enum Commands {
 	},
 	CreateAccount {
 		id_of_account: u32, 
-		starting_balance: u32,
+		starting_balance: i32,
 	},
 	Transfert {
 		from_account: u32, 
 		to_account: u32,
-		ammount: u32,
+		ammount: i32,
 	},
 	Balance {
 		account: u32,
@@ -69,10 +69,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 	match cli.command {
 
 		Commands::StartNode {} => {
-
 			println!("Starting Node ...");
 
-			let chain = Blockchain::new();
+			let mut chain = Blockchain::new();
+
 			match UdpSocket::bind(NODE_ADDR).await {
 				Err(e) => {
 					if e.kind() == io::ErrorKind::AddrInUse {
@@ -110,7 +110,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 									},
 									Commands::Balance { account } => {
 
-										let ammount: u32 = chain.get_balance(account);
+										let ammount: i32 = chain.get_balance(account);
 										
 										let msg = format!("Balance of account '{:?}' is {:?}", account, ammount);
 										socket.send_to(msg.as_bytes(), addr).await?;
